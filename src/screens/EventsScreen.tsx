@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
     View, Text, ScrollView, StyleSheet, TouchableOpacity,
     ActivityIndicator, Alert, RefreshControl, Modal, Pressable,
-    TextInput, Platform,
+    TextInput, Platform, KeyboardAvoidingView, Keyboard,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -179,13 +179,17 @@ export default function EventsScreen() {
             </TouchableOpacity>
 
             {/* Add / Edit Sheet */}
-            <Modal visible={sheetVisible} transparent animationType="slide" onRequestClose={() => setSheetVisible(false)}>
-                <Pressable style={styles.overlay} onPress={() => setSheetVisible(false)} />
+            <Modal visible={sheetVisible} transparent animationType="slide" onRequestClose={() => { Keyboard.dismiss(); setSheetVisible(false); }}>
+                <KeyboardAvoidingView
+                    style={{ flex: 1, justifyContent: 'flex-end' }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                <Pressable style={styles.overlay} onPress={() => { Keyboard.dismiss(); setSheetVisible(false); }} />
                 <View style={styles.sheet}>
                     <View style={styles.sheetHandle} />
                     <Text style={styles.sheetTitle}>{editingEvent ? 'Edit Event' : 'New Event'}</Text>
 
-                    <ScrollView style={styles.formScroll} keyboardShouldPersistTaps="handled">
+                    <ScrollView style={styles.formScroll} keyboardShouldPersistTaps="handled" onScrollBeginDrag={Keyboard.dismiss}>
                         {/* Name */}
                         <Text style={styles.fieldLabel}>Event name *</Text>
                         <TextInput
@@ -194,6 +198,8 @@ export default function EventsScreen() {
                             onChangeText={v => setForm(f => ({ ...f, name: v }))}
                             placeholder="e.g. Ana's birthday party"
                             placeholderTextColor="#94a3b8"
+                            returnKeyType="done"
+                            onSubmitEditing={Keyboard.dismiss}
                         />
 
                         {/* Date */}
@@ -220,6 +226,8 @@ export default function EventsScreen() {
                             onChangeText={v => setForm(f => ({ ...f, location: v }))}
                             placeholder="e.g. The Italian Restaurant"
                             placeholderTextColor="#94a3b8"
+                            returnKeyType="done"
+                            onSubmitEditing={Keyboard.dismiss}
                         />
 
                         {/* RSVP */}
@@ -266,6 +274,8 @@ export default function EventsScreen() {
                                     placeholderTextColor="#94a3b8"
                                     multiline
                                     numberOfLines={3}
+                                    returnKeyType="done"
+                                    blurOnSubmit
                                 />
                             </>
                         )}
@@ -286,6 +296,7 @@ export default function EventsScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
+                </KeyboardAvoidingView>
             </Modal>
         </>
     );

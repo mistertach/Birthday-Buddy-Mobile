@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
     ScrollView, View, Text, TextInput, TouchableOpacity,
     StyleSheet, ActivityIndicator, Alert, Platform,
+    KeyboardAvoidingView, Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -135,10 +136,16 @@ export default function ContactFormScreen({ route, navigation }: Props) {
 
     return (
         <>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            >
             <ScrollView
                 style={styles.container}
                 contentContainerStyle={styles.content}
                 keyboardShouldPersistTaps="handled"
+                onScrollBeginDrag={Keyboard.dismiss}
             >
                 {/* Name */}
                 <View style={styles.card}>
@@ -151,6 +158,7 @@ export default function ContactFormScreen({ route, navigation }: Props) {
                         placeholderTextColor={colors.textMuted}
                         autoCapitalize="words"
                         returnKeyType="done"
+                        onSubmitEditing={Keyboard.dismiss}
                     />
                 </View>
 
@@ -200,6 +208,7 @@ export default function ContactFormScreen({ route, navigation }: Props) {
                         placeholderTextColor={colors.textMuted}
                         keyboardType="phone-pad"
                         returnKeyType="done"
+                        onSubmitEditing={Keyboard.dismiss}
                     />
                     <Text style={styles.hint}>Include country code for WhatsApp to work</Text>
                 </View>
@@ -216,6 +225,8 @@ export default function ContactFormScreen({ route, navigation }: Props) {
                         multiline
                         numberOfLines={4}
                         textAlignVertical="top"
+                        returnKeyType="done"
+                        blurOnSubmit
                     />
                 </View>
 
@@ -235,6 +246,7 @@ export default function ContactFormScreen({ route, navigation }: Props) {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+            </KeyboardAvoidingView>
 
             {/* iOS date picker */}
             {showDatePicker && (
