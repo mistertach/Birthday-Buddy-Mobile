@@ -4,6 +4,9 @@ export type User = {
     name: string | null;
     image?: string | null;
     isAdmin: boolean;
+    plan: 'free' | 'premium';
+    wishesDelivered?: number;
+    streak?: number;
 };
 
 export type Contact = {

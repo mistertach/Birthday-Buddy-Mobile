@@ -1,4 +1,5 @@
 export type AuthStackParamList = {
+    Onboarding: undefined;
     Login: undefined;
     Register: undefined;
 };
@@ -9,19 +10,19 @@ export type BirthdaysStackParamList = {
     ContactForm: { id?: string };
 };
 
-export type CalendarStackParamList = {
-    Calendar: undefined;
-};
-
 export type EventsStackParamList = {
     Events: undefined;
 };
 
-// Bottom tab param list
+export type ProfileStackParamList = {
+    Profile: undefined;
+};
+
+// Bottom tab param list — 3 tabs: Birthdays, Events, You
 export type AppTabParamList = {
     BirthdaysTab: undefined;
-    CalendarTab: undefined;
     EventsTab: undefined;
+    ProfileTab: undefined;
 };
 
 // Keep legacy alias so ContactCard/ContactsScreen don't need changes

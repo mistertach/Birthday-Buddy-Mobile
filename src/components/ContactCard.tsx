@@ -14,10 +14,72 @@ type Props = {
     onDeleted: (id: string) => void;
 };
 
+type ToneCategory = { label: string; emoji: string; messages: string[] };
+
+function getMessageCategories(name: string, isMissed: boolean, isBelated: boolean): ToneCategory[] {
+    const firstName = name.split(' ')[0];
+    if (isMissed || isBelated) {
+        return [
+            {
+                label: 'Warm & sorry', emoji: '💛',
+                messages: [
+                    `Happy belated birthday, ${firstName}! 🎉 So sorry I missed the day — hope it was absolutely wonderful!`,
+                    `A little late but full of love — happy belated birthday, ${firstName}! 🎂 Wishing you all the best this year.`,
+                    `Better late than never! Happy belated birthday ${firstName}! Hope you had an amazing celebration 🎊`,
+                ],
+            },
+            {
+                label: 'Funny & casual', emoji: '😄',
+                messages: [
+                    `Plot twist: I wanted to see if you'd notice a late birthday wish. Happy belated ${firstName}! 😂🎂`,
+                    `I didn't forget — I just wanted to extend your birthday celebrations! Happy belated ${firstName} 🎉`,
+                    `Late is the new on-time, right? Happy belated birthday ${firstName}! 🥳`,
+                ],
+            },
+        ];
+    }
+    return [
+        {
+            label: 'Warm & heartfelt', emoji: '💛',
+            messages: [
+                `Happy Birthday, ${firstName}! 🎉 Wishing you a day as wonderful as you are — full of joy, love, and everything you deserve!`,
+                `Sending you so much love on your special day, ${firstName}! 🥳 Hope this year brings you incredible things.`,
+                `Happy Birthday ${firstName}! 🎂 You deserve all the happiness in the world today and every day.`,
+            ],
+        },
+        {
+            label: 'Casual & fun', emoji: '😊',
+            messages: [
+                `Happy Birthday ${firstName}! 🎉 Hope you have an amazing day! Let's celebrate soon!`,
+                `It's your day, ${firstName}! 🎂 Make it count — you only turn this age once 😄`,
+                `Happy Birthday! 🥳 Another year wiser, another year more awesome. Have a great one ${firstName}!`,
+            ],
+        },
+        {
+            label: 'Funny & playful', emoji: '😂',
+            messages: [
+                `Happy Birthday ${firstName}! 🎂 You're not getting older — you're getting better. Like fine wine… or a good cheese 🧀`,
+                `Congrats on surviving another year, ${firstName}! 🎉 Your secret is safe with me 😉`,
+                `Happy Birthday! 🥳 I was going to bake you a cake but ate it testing the frosting. Sorry not sorry 😄`,
+            ],
+        },
+        {
+            label: 'Formal & gracious', emoji: '✨',
+            messages: [
+                `Dear ${firstName}, wishing you a very happy birthday and a year filled with health, happiness, and success. 🌟`,
+                `Happy Birthday, ${firstName}. May this special day mark the beginning of a wonderful new chapter in your life. 🎂`,
+                `Warmest birthday wishes to you, ${firstName}. May your day be filled with joy and surrounded by the people you love. ✨`,
+            ],
+        },
+    ];
+}
+
 export default function ContactCard({ contact, onWished, onEdit, onDeleted }: Props) {
     const [wishModalVisible, setWishModalVisible] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
+    const [selectedTone, setSelectedTone] = useState(0);
     const [selectedMessage, setSelectedMessage] = useState('');
+    const [wishing, setWishing] = useState(false);
 
     const status = getBirthdayStatus(contact.day, contact.month, contact.lastWishedYear);
     const days = daysUntilBirthday(contact.day, contact.month);
@@ -25,35 +87,27 @@ export default function ContactCard({ contact, onWished, onEdit, onDeleted }: Pr
     const isWished = status === 'wished';
     const isToday = status === 'today';
     const isMissed = status === 'missed';
-    const canWish = status !== 'upcoming';
 
-    const cardStyle = isToday
-        ? styles.cardToday
-        : isMissed ? styles.cardMissed
-        : isWished ? styles.cardWished
-        : styles.card;
+    const toneCategories = getMessageCategories(contact.name, isMissed, isMissed);
 
-    const PRESETS = isMissed ? [
-        `Happy belated birthday, ${contact.name}! 🎉 Sorry for the late message, hope it was amazing!`,
-        `Wishing you a wonderful (belated!) birthday, ${contact.name}! Better late than never 😊`,
-        `Happy belated birthday ${contact.name}! Hope the celebrations are still going! 🎂`,
-    ] : [
-        `Happy Birthday, ${contact.name}! 🎉 Hope you have an amazing day!`,
-        `Wishing you a wonderful birthday, ${contact.name}! Hope you're surrounded by love today 🎂`,
-        `Happy Birthday ${contact.name}! Have a fantastic day! 🥳`,
-    ];
+    const cardStyle = isToday ? styles.cardToday : isMissed ? styles.cardMissed : isWished ? styles.cardWished : styles.card;
 
     const openWishSheet = () => {
+        setSelectedTone(0);
         setSelectedMessage('');
         setWishModalVisible(true);
     };
 
     const handleWish = async () => {
+        if (wishing) return;
+        setWishing(true);
         try {
             await contactsApi.markWished(contact.id, !isWished);
             onWished(contact.id, !isWished);
         } catch {
-            Alert.alert('Error', 'Could not update wish status');
+            Alert.alert('Error', 'Could not update wish status. Check your connection and try again.');
+        } finally {
+            setWishing(false);
         }
     };
 
@@ -70,6 +124,7 @@ export default function ContactCard({ contact, onWished, onEdit, onDeleted }: Pr
 
     const handleShare = async (msg: string) => {
         await Share.share({ message: msg });
+        setWishModalVisible(false);
     };
 
     const handleDelete = () => {
@@ -84,7 +139,7 @@ export default function ContactCard({ contact, onWished, onEdit, onDeleted }: Pr
                     } catch {
                         Alert.alert('Error', 'Could not delete contact');
                     }
-                }
+                },
             },
         ]);
     };
@@ -106,51 +161,42 @@ export default function ContactCard({ contact, onWished, onEdit, onDeleted }: Pr
                         {contact.name}
                     </Text>
                     <View style={styles.metaRow}>
-                        {contact.relationship ? (
-                            <Text style={styles.rel}>{contact.relationship}</Text>
-                        ) : null}
-                        {contact.relationship && (isToday || isMissed || days <= 14) ? (
-                            <Text style={styles.dot}>·</Text>
-                        ) : null}
-                        {isToday && <Text style={styles.labelToday}>Today!</Text>}
-                        {isMissed && <Text style={styles.labelMissed}>⏰ Missed</Text>}
+                        {contact.relationship ? <Text style={styles.rel}>{contact.relationship}</Text> : null}
+                        {contact.relationship && (isToday || isMissed || days <= 14) ? <Text style={styles.dot}>·</Text> : null}
+                        {isToday && <Text style={styles.labelToday}>Today! 🎉</Text>}
+                        {isMissed && <Text style={styles.labelMissed}>⏰ Belated</Text>}
                         {!isToday && !isMissed && days <= 14 && (
-                            <Text style={[styles.daysText, days <= 3 && styles.daysUrgent]}>
-                                {relativeLabel(days)}
-                            </Text>
+                            <Text style={[styles.daysText, days <= 3 && styles.daysUrgent]}>{relativeLabel(days)}</Text>
                         )}
                         {turningAge && (
-                            <>
-                                <Text style={styles.dot}>·</Text>
-                                <Text style={styles.age}>Turns {turningAge}</Text>
-                            </>
+                            <><Text style={styles.dot}>·</Text><Text style={styles.age}>Turns {turningAge}</Text></>
                         )}
                     </View>
                 </View>
 
-                {/* Days pill (for upcoming > 14 days) */}
+                {/* Days pill */}
                 {!isToday && !isMissed && !isWished && days > 14 && (
-                    <View style={styles.pill}>
-                        <Text style={styles.pillText}>{days}d</Text>
-                    </View>
+                    <View style={styles.pill}><Text style={styles.pillText}>{days}d</Text></View>
                 )}
 
-                {/* Action buttons */}
+                {/* Actions */}
                 <View style={styles.actions}>
-                    {/* WhatsApp/message button */}
-                    {(isToday || isMissed) && (
-                        <TouchableOpacity style={styles.whatsappBtn} onPress={openWishSheet}>
+                    {/* Wish button — shown for today, missed, and upcoming ≤7 days */}
+                    {(isToday || isMissed || days <= 7) && !isWished && (
+                        <TouchableOpacity style={[styles.whatsappBtn, isMissed && styles.whatsappBtnMissed]} onPress={openWishSheet}>
                             <Text style={styles.whatsappIcon}>💬</Text>
                         </TouchableOpacity>
                     )}
 
-                    {/* Tick */}
+                    {/* Tick — always visible, marks as wished */}
                     <TouchableOpacity
-                        style={[styles.tickBtn, isWished && styles.tickBtnWished, !canWish && styles.tickBtnHidden]}
-                        onPress={canWish ? handleWish : undefined}
-                        disabled={!canWish}
+                        style={[styles.tickBtn, isWished && styles.tickBtnWished, wishing && styles.tickBtnLoading]}
+                        onPress={handleWish}
+                        disabled={wishing}
                     >
-                        <Text style={[styles.tickIcon, isWished && styles.tickIconWished]}>✓</Text>
+                        <Text style={[styles.tickIcon, isWished && styles.tickIconWished]}>
+                            {wishing ? '…' : '✓'}
+                        </Text>
                     </TouchableOpacity>
 
                     {/* Menu */}
@@ -166,14 +212,27 @@ export default function ContactCard({ contact, onWished, onEdit, onDeleted }: Pr
                 <View style={styles.sheet}>
                     <View style={styles.sheetHandle} />
                     <Text style={styles.sheetTitle}>
-                        {isMissed ? `Belated wish for ${contact.name} 🕐` : `Wish ${contact.name} 🎂`}
+                        {isMissed ? `Belated wish for ${contact.name.split(' ')[0]} 🕐` : `Wish ${contact.name.split(' ')[0]} 🎂`}
                     </Text>
                     <Text style={styles.sheetSubtitle}>{formatBirthday(contact.day, contact.month, contact.year)}</Text>
 
-                    {/* Preset message cards */}
-                    <Text style={styles.pickLabel}>Pick a message</Text>
+                    {/* Tone selector */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.toneScroll} contentContainerStyle={styles.toneScrollContent}>
+                        {toneCategories.map((cat, i) => (
+                            <TouchableOpacity
+                                key={i}
+                                style={[styles.toneChip, i === selectedTone && styles.toneChipActive]}
+                                onPress={() => { setSelectedTone(i); setSelectedMessage(''); }}
+                            >
+                                <Text style={styles.toneEmoji}>{cat.emoji}</Text>
+                                <Text style={[styles.toneLabel, i === selectedTone && styles.toneLabelActive]}>{cat.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Message cards */}
                     <ScrollView style={styles.presetScroll} showsVerticalScrollIndicator={false}>
-                        {PRESETS.map((msg, i) => {
+                        {toneCategories[selectedTone].messages.map((msg, i) => {
                             const isSelected = selectedMessage === msg;
                             return (
                                 <TouchableOpacity
@@ -185,37 +244,28 @@ export default function ContactCard({ contact, onWished, onEdit, onDeleted }: Pr
                                     <View style={styles.presetRadio}>
                                         {isSelected && <View style={styles.presetRadioDot} />}
                                     </View>
-                                    <Text style={[styles.presetText, isSelected && styles.presetTextSelected]}>
-                                        {msg}
-                                    </Text>
+                                    <Text style={[styles.presetText, isSelected && styles.presetTextSelected]}>{msg}</Text>
                                 </TouchableOpacity>
                             );
                         })}
                     </ScrollView>
 
-                    {/* Send buttons — only when a message is picked */}
                     {selectedMessage ? (
                         <View style={styles.sendRow}>
-                            <TouchableOpacity
-                                style={styles.waBtn}
-                                onPress={() => handleWhatsApp(selectedMessage)}
-                            >
+                            <TouchableOpacity style={styles.waBtn} onPress={() => handleWhatsApp(selectedMessage)}>
                                 <Text style={styles.waBtnText}>📱 WhatsApp</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.shareBtn}
-                                onPress={() => handleShare(selectedMessage)}
-                            >
+                            <TouchableOpacity style={styles.shareBtn} onPress={() => handleShare(selectedMessage)}>
                                 <Text style={styles.shareBtnText}>↑ Share</Text>
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <View style={styles.sendRowPlaceholder} />
+                        <Text style={styles.pickHint}>Pick a message above to send it</Text>
                     )}
                 </View>
             </Modal>
 
-            {/* Menu Modal */}
+            {/* Context menu */}
             <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
                 <Pressable style={styles.overlay} onPress={() => setMenuVisible(false)} />
                 <View style={styles.menu}>
@@ -259,29 +309,26 @@ const styles = StyleSheet.create({
     daysText: { fontSize: 12, color: '#64748b' },
     daysUrgent: { color: '#d97706', fontWeight: '600' },
     age: { fontSize: 12, color: '#94a3b8' },
-    pill: {
-        backgroundColor: '#fce7f3', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginRight: 6,
-    },
+    pill: { backgroundColor: '#fce7f3', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginRight: 6 },
     pillText: { fontSize: 12, color: '#be185d', fontWeight: '600' },
     actions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     whatsappBtn: {
         width: 34, height: 34, borderRadius: 17, backgroundColor: '#dcfce7',
         alignItems: 'center', justifyContent: 'center',
     },
+    whatsappBtnMissed: { backgroundColor: '#fee2e2' },
     whatsappIcon: { fontSize: 16 },
     tickBtn: {
         width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: '#cbd5e1',
         alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff',
     },
     tickBtnWished: { backgroundColor: '#dcfce7', borderColor: '#86efac' },
-    tickBtnHidden: { opacity: 0 },
+    tickBtnLoading: { opacity: 0.5 },
     tickIcon: { fontSize: 14, color: '#94a3b8', fontWeight: '700' },
     tickIconWished: { color: '#16a34a' },
     menuBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
     menuIcon: { fontSize: 18, color: '#94a3b8' },
-    // Overlay
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-    // Wish sheet
     sheet: {
         position: 'absolute', bottom: 0, left: 0, right: 0,
         backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -289,9 +336,21 @@ const styles = StyleSheet.create({
     },
     sheetHandle: { width: 40, height: 4, backgroundColor: '#e2e8f0', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
     sheetTitle: { fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 4 },
-    sheetSubtitle: { fontSize: 13, color: '#94a3b8', textAlign: 'center', marginBottom: 14 },
-    pickLabel: { fontSize: 12, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.8, marginBottom: 10 },
-    presetScroll: { maxHeight: 200, marginBottom: 14 },
+    sheetSubtitle: { fontSize: 13, color: '#94a3b8', textAlign: 'center', marginBottom: 12 },
+    // Tone selector
+    toneScroll: { maxHeight: 52, marginBottom: 14 },
+    toneScrollContent: { gap: 8, paddingHorizontal: 2 },
+    toneChip: {
+        flexDirection: 'row', alignItems: 'center', gap: 5,
+        paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
+        borderWidth: 1.5, borderColor: '#e2e8f0', backgroundColor: '#f8fafc',
+    },
+    toneChipActive: { borderColor: '#ec4899', backgroundColor: '#fdf2f8' },
+    toneEmoji: { fontSize: 14 },
+    toneLabel: { fontSize: 12, fontWeight: '600', color: '#64748b' },
+    toneLabelActive: { color: '#be185d' },
+    // Message cards
+    presetScroll: { maxHeight: 220, marginBottom: 14 },
     presetCard: {
         flexDirection: 'row', alignItems: 'flex-start', gap: 10,
         backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginBottom: 8,
@@ -305,17 +364,12 @@ const styles = StyleSheet.create({
     presetRadioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#ec4899' },
     presetText: { flex: 1, fontSize: 14, color: '#475569', lineHeight: 20 },
     presetTextSelected: { color: '#be185d', fontWeight: '600' },
+    pickHint: { textAlign: 'center', fontSize: 13, color: '#94a3b8', marginBottom: 12 },
     sendRow: { flexDirection: 'row', gap: 10 },
-    sendRowPlaceholder: { height: 48 },
-    waBtn: {
-        flex: 1, backgroundColor: '#22c55e', borderRadius: 12, padding: 14, alignItems: 'center',
-    },
+    waBtn: { flex: 1, backgroundColor: '#22c55e', borderRadius: 12, padding: 14, alignItems: 'center' },
     waBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-    shareBtn: {
-        flex: 1, backgroundColor: '#6366f1', borderRadius: 12, padding: 14, alignItems: 'center',
-    },
+    shareBtn: { flex: 1, backgroundColor: '#6366f1', borderRadius: 12, padding: 14, alignItems: 'center' },
     shareBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-    // Context menu
     menu: {
         position: 'absolute', bottom: 40, alignSelf: 'center', width: 220,
         backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden',

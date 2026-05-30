@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setAuthToken(stored);
                     setToken(stored);
                     const me = await authApi.me();
-                    setUser({ id: me.id, email: me.email, name: me.name, isAdmin: me.isAdmin });
+                    setUser({ id: me.id, email: me.email, name: me.name, isAdmin: me.isAdmin, plan: me.plan ?? 'free', wishesDelivered: me.wishesDelivered, streak: me.streak });
                 }
             } catch {
                 await AsyncStorage.removeItem(TOKEN_KEY);
@@ -52,12 +52,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const login = useCallback(async (email: string, password: string) => {
         const res = await authApi.login(email, password);
-        await persist(res.token, res.user);
+        await persist(res.token, { ...res.user, plan: res.user.plan ?? 'free' });
     }, [persist]);
 
     const register = useCallback(async (name: string, email: string, password: string) => {
         const res = await authApi.register(name, email, password);
-        await persist(res.token, res.user);
+        await persist(res.token, { ...res.user, plan: res.user.plan ?? 'free' });
     }, [persist]);
 
     const logout = useCallback(async () => {

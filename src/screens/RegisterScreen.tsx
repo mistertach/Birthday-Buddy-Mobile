@@ -31,8 +31,9 @@ export default function RegisterScreen({ navigation }: Props) {
             Alert.alert('Name too short', 'Please enter your full name (at least 2 characters).');
             return;
         }
-        if (!email.includes('@')) {
-            Alert.alert('Invalid email', 'Please enter a valid email address.');
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+        if (!emailRegex.test(email.trim())) {
+            Alert.alert('Invalid email', 'Please enter a valid email address (e.g. you@example.com).');
             return;
         }
         if (password.length < 6) {

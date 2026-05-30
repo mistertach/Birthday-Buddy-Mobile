@@ -1,33 +1,40 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../auth/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import ContactsScreen from '../screens/ContactsScreen';
 import ContactFormScreen from '../screens/ContactFormScreen';
-import CalendarScreen from '../screens/CalendarScreen';
 import EventsScreen from '../screens/EventsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import type {
     AuthStackParamList,
     BirthdaysStackParamList,
-    CalendarStackParamList,
     EventsStackParamList,
+    ProfileStackParamList,
     AppTabParamList,
 } from './types';
 import { colors } from '../theme';
 
+const ONBOARDING_KEY = 'bb_onboarding_done';
+
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const BirthdaysStack = createNativeStackNavigator<BirthdaysStackParamList>();
-const CalendarStack = createNativeStackNavigator<CalendarStackParamList>();
 const EventsStack = createNativeStackNavigator<EventsStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const Tab = createBottomTabNavigator<AppTabParamList>();
 
-function AuthNavigator() {
+function AuthNavigator({ onOnboardingDone }: { onOnboardingDone: () => void }) {
     return (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+            <AuthStack.Screen name="Onboarding">
+                {() => <OnboardingScreen onDone={onOnboardingDone} />}
+            </AuthStack.Screen>
             <AuthStack.Screen name="Login" component={LoginScreen} />
             <AuthStack.Screen name="Register" component={RegisterScreen} />
         </AuthStack.Navigator>
@@ -61,31 +68,12 @@ function BirthdaysNavigator() {
     );
 }
 
-function CalendarNavigator() {
-    return (
-        <CalendarStack.Navigator
-            screenOptions={{
-                headerStyle: { backgroundColor: colors.surface },
-                headerTintColor: colors.primary,
-                headerTitleStyle: { fontWeight: '700', color: colors.text },
-                headerShadowVisible: false,
-            }}
-        >
-            <CalendarStack.Screen
-                name="Calendar"
-                component={CalendarScreen}
-                options={{ title: 'Calendar' }}
-            />
-        </CalendarStack.Navigator>
-    );
-}
-
 function EventsNavigator() {
     return (
         <EventsStack.Navigator
             screenOptions={{
                 headerStyle: { backgroundColor: colors.surface },
-                headerTintColor: colors.primary,
+                headerTintColor: '#7c3aed',
                 headerTitleStyle: { fontWeight: '700', color: colors.text },
                 headerShadowVisible: false,
             }}
@@ -93,9 +81,28 @@ function EventsNavigator() {
             <EventsStack.Screen
                 name="Events"
                 component={EventsScreen}
-                options={{ title: 'Events' }}
+                options={{ title: 'Parties & Events' }}
             />
         </EventsStack.Navigator>
+    );
+}
+
+function ProfileNavigator() {
+    return (
+        <ProfileStack.Navigator
+            screenOptions={{
+                headerStyle: { backgroundColor: colors.surface },
+                headerTintColor: colors.primary,
+                headerTitleStyle: { fontWeight: '700', color: colors.text },
+                headerShadowVisible: false,
+            }}
+        >
+            <ProfileStack.Screen
+                name="Profile"
+                component={ProfileScreen}
+                options={{ title: 'Your account' }}
+            />
+        </ProfileStack.Navigator>
     );
 }
 
@@ -121,8 +128,6 @@ function AppNavigator() {
                     height: 72,
                     paddingBottom: 12,
                 },
-                tabBarActiveTintColor: colors.primary,
-                tabBarInactiveTintColor: '#94a3b8',
             }}
         >
             <Tab.Screen
@@ -133,17 +138,17 @@ function AppNavigator() {
                 }}
             />
             <Tab.Screen
-                name="CalendarTab"
-                component={CalendarNavigator}
-                options={{
-                    tabBarIcon: ({ focused }) => <TabIcon emoji="📅" label="Calendar" focused={focused} />,
-                }}
-            />
-            <Tab.Screen
                 name="EventsTab"
                 component={EventsNavigator}
                 options={{
                     tabBarIcon: ({ focused }) => <TabIcon emoji="🎉" label="Events" focused={focused} />,
+                }}
+            />
+            <Tab.Screen
+                name="ProfileTab"
+                component={ProfileNavigator}
+                options={{
+                    tabBarIcon: ({ focused }) => <TabIcon emoji="👤" label="You" focused={focused} />,
                 }}
             />
         </Tab.Navigator>
@@ -152,16 +157,35 @@ function AppNavigator() {
 
 export default function RootNavigator() {
     const { user, loading } = useAuth();
-    if (loading) {
+    const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+    const [onboardingDone, setOnboardingDone] = useState(false);
+
+    useEffect(() => {
+        AsyncStorage.getItem(ONBOARDING_KEY).then(val => {
+            setOnboardingDone(val === 'true');
+            setCheckingOnboarding(false);
+        });
+    }, []);
+
+    const handleOnboardingDone = async () => {
+        await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+        setOnboardingDone(true);
+    };
+
+    if (loading || checkingOnboarding) {
         return (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator size="large" color="#ec4899" />
             </View>
         );
     }
+
     return (
         <NavigationContainer>
-            {user ? <AppNavigator /> : <AuthNavigator />}
+            {user
+                ? <AppNavigator />
+                : <AuthNavigator onOnboardingDone={handleOnboardingDone} />
+            }
         </NavigationContainer>
     );
 }
@@ -169,6 +193,7 @@ export default function RootNavigator() {
 const tabStyles = StyleSheet.create({
     iconWrap: { alignItems: 'center', justifyContent: 'center', gap: 2 },
     iconEmoji: { fontSize: 22 },
+    // Shorter labels fit on all screen sizes
     iconLabel: { fontSize: 10, fontWeight: '600', color: '#94a3b8' },
     iconLabelActive: { color: '#ec4899' },
 });
