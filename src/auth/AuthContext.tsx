@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setAuthToken } from '../api/client';
+import { setAuthToken, api } from '../api/client';
 import { authApi } from '../api/auth';
 import { User } from '../types';
 
@@ -13,9 +13,24 @@ type AuthState = {
     login: (email: string, password: string) => Promise<void>;
     register: (name: string, email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
+    updateProfile: (data: { name?: string; birthdayDay?: number | null; birthdayMonth?: number | null }) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
+
+function normalizeUser(raw: any): User {
+    return {
+        id: raw.id,
+        email: raw.email,
+        name: raw.name,
+        isAdmin: raw.isAdmin ?? false,
+        plan: raw.plan ?? 'free',
+        wishesDelivered: raw.wishesDelivered,
+        streak: raw.streak,
+        birthdayDay: raw.birthdayDay ?? null,
+        birthdayMonth: raw.birthdayMonth ?? null,
+    };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -30,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setAuthToken(stored);
                     setToken(stored);
                     const me = await authApi.me();
-                    setUser({ id: me.id, email: me.email, name: me.name, isAdmin: me.isAdmin, plan: me.plan ?? 'free', wishesDelivered: me.wishesDelivered, streak: me.streak });
+                    setUser(normalizeUser(me));
                 }
             } catch {
                 await AsyncStorage.removeItem(TOKEN_KEY);
@@ -52,12 +67,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const login = useCallback(async (email: string, password: string) => {
         const res = await authApi.login(email, password);
-        await persist(res.token, { ...res.user, plan: res.user.plan ?? 'free' });
+        await persist(res.token, normalizeUser(res.user));
     }, [persist]);
 
     const register = useCallback(async (name: string, email: string, password: string) => {
         const res = await authApi.register(name, email, password);
-        await persist(res.token, { ...res.user, plan: res.user.plan ?? 'free' });
+        await persist(res.token, normalizeUser(res.user));
     }, [persist]);
 
     const logout = useCallback(async () => {
@@ -67,7 +82,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
     }, []);
 
-    const value = useMemo(() => ({ user, token, loading, login, register, logout }), [user, token, loading, login, register, logout]);
+    const updateProfile = useCallback(async (data: {
+        name?: string;
+        birthdayDay?: number | null;
+        birthdayMonth?: number | null;
+    }) => {
+        const updated = await api<User>('/api/v1/me', {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+        setUser(prev => prev ? { ...prev, ...normalizeUser({ ...prev, ...updated }) } : null);
+    }, []);
+
+    const value = useMemo(
+        () => ({ user, token, loading, login, register, logout, updateProfile }),
+        [user, token, loading, login, register, logout, updateProfile]
+    );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -102,6 +102,12 @@ export default function ContactsScreen({ navigation }: Props) {
         setContacts(prev => prev.filter(c => c.id !== id));
     }, []);
 
+    // Is it the user's own birthday today?
+    const today = new Date();
+    const isMyBirthday = !!(user?.birthdayDay && user?.birthdayMonth &&
+        user.birthdayDay === today.getDate() &&
+        user.birthdayMonth === today.getMonth() + 1);
+
     if (loading) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#ec4899" /></View>;
     }
@@ -172,6 +178,17 @@ export default function ContactsScreen({ navigation }: Props) {
                     clearButtonMode="while-editing"
                 />
             </View>
+
+            {/* Self-birthday banner */}
+            {isMyBirthday && (
+                <View style={styles.selfBdayBanner}>
+                    <Text style={styles.selfBdayEmoji}>🎂</Text>
+                    <View>
+                        <Text style={styles.selfBdayTitle}>Happy Birthday, {user?.name?.split(' ')[0]}!</Text>
+                        <Text style={styles.selfBdaySub}>Hope your day is amazing 🎉</Text>
+                    </View>
+                </View>
+            )}
 
             {/* Grid view */}
             {viewMode === 'grid' ? (
@@ -329,6 +346,13 @@ const styles = StyleSheet.create({
     addOptionEmoji: { fontSize: 28, width: 36, textAlign: 'center' },
     addOptionLabel: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
     addOptionHint: { fontSize: 12, color: '#94a3b8', marginTop: 1 },
+    selfBdayBanner: {
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        backgroundColor: '#ec4899', paddingHorizontal: 16, paddingVertical: 12,
+    },
+    selfBdayEmoji: { fontSize: 28 },
+    selfBdayTitle: { fontSize: 15, fontWeight: '800', color: '#fff' },
+    selfBdaySub: { fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 1 },
     fab: {
         position: 'absolute', bottom: 32, right: 24,
         width: 58, height: 58, borderRadius: 29, backgroundColor: '#ec4899',

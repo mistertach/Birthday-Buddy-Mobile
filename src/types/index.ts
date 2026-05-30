@@ -7,6 +7,8 @@ export type User = {
     plan: 'free' | 'premium';
     wishesDelivered?: number;
     streak?: number;
+    birthdayDay?: number | null;
+    birthdayMonth?: number | null;
 };
 
 export type Contact = {

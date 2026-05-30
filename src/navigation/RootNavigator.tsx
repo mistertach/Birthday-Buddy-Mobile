@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -29,7 +29,7 @@ const EventsStack = createNativeStackNavigator<EventsStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const Tab = createBottomTabNavigator<AppTabParamList>();
 
-function AuthNavigator({ onOnboardingDone }: { onOnboardingDone: () => void }) {
+function AuthNavigator({ onOnboardingDone }: { onOnboardingDone: (birthday?: { day: number; month: number }) => void }) {
     return (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
             <AuthStack.Screen name="Onboarding">
@@ -156,7 +156,7 @@ function AppNavigator() {
 }
 
 export default function RootNavigator() {
-    const { user, loading } = useAuth();
+    const { user, loading, updateProfile } = useAuth();
     const [checkingOnboarding, setCheckingOnboarding] = useState(true);
     const [onboardingDone, setOnboardingDone] = useState(false);
 
@@ -167,10 +167,27 @@ export default function RootNavigator() {
         });
     }, []);
 
-    const handleOnboardingDone = async () => {
+    const handleOnboardingDone = async (birthday?: { day: number; month: number }) => {
         await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
         setOnboardingDone(true);
+        // Birthday is saved after the user logs in; we store it temporarily
+        if (birthday) {
+            await AsyncStorage.setItem('bb_pending_birthday', JSON.stringify(birthday));
+        }
     };
+
+    // After login/register, save any birthday collected during onboarding
+    useEffect(() => {
+        if (!user) return;
+        AsyncStorage.getItem('bb_pending_birthday').then(async raw => {
+            if (!raw) return;
+            await AsyncStorage.removeItem('bb_pending_birthday');
+            const bday = JSON.parse(raw);
+            if (bday?.day && bday?.month && !user.birthdayDay) {
+                updateProfile({ birthdayDay: bday.day, birthdayMonth: bday.month }).catch(() => {});
+            }
+        });
+    }, [user?.id]);
 
     if (loading || checkingOnboarding) {
         return (
