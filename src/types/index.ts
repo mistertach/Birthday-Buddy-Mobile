@@ -21,6 +21,7 @@ export type Contact = {
     phone: string | null;
     relationship: string | null;
     reminderType: string | null;
+    givesGifts: boolean;
     notes: string | null;
     lastWishedYear: number | null;
     parentId: string | null;
@@ -36,6 +37,7 @@ export type ContactInput = {
     phone?: string | null;
     relationship?: string | null;
     reminderType?: string | null;
+    givesGifts?: boolean;
     notes?: string | null;
 };
 

@@ -22,12 +22,6 @@ const RELATIONSHIPS = [
     { label: '✨ Other', value: 'Other' },
 ];
 
-const REMINDERS = [
-    { label: '🔔 On the day', value: 'day' },
-    { label: '📅 1 week before', value: 'week' },
-    { label: '📆 1 month before', value: 'month' },
-    { label: '🔕 No reminder', value: 'none' },
-];
 
 export default function ContactFormScreen({ route, navigation }: Props) {
     const id = route.params?.id;
@@ -38,8 +32,7 @@ export default function ContactFormScreen({ route, navigation }: Props) {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [relationship, setRelationship] = useState('Friend');
     const [showRelPicker, setShowRelPicker] = useState(false);
-    const [reminder, setReminder] = useState('week');
-    const [showReminderPicker, setShowReminderPicker] = useState(false);
+    const [givesGifts, setGivesGifts] = useState(false);
     const [phone, setPhone] = useState('');
     const [notes, setNotes] = useState('');
     const [loading, setLoading] = useState(isEdit);
@@ -54,7 +47,7 @@ export default function ContactFormScreen({ route, navigation }: Props) {
                 const yr = c.year || new Date().getFullYear();
                 setBirthday(new Date(yr, c.month - 1, c.day));
                 setRelationship(c.relationship || 'Friend');
-                setReminder(c.reminderType || 'week');
+                setGivesGifts(c.givesGifts ?? false);
                 setPhone(c.phone || '');
                 setNotes(c.notes || '');
             } catch {
@@ -74,7 +67,6 @@ export default function ContactFormScreen({ route, navigation }: Props) {
     };
 
     const relLabel = RELATIONSHIPS.find(r => r.value === relationship)?.label ?? relationship;
-    const remLabel = REMINDERS.find(r => r.value === reminder)?.label ?? reminder;
 
     const onSave = async () => {
         if (!name.trim()) {
@@ -91,7 +83,7 @@ export default function ContactFormScreen({ route, navigation }: Props) {
             month: birthday.getMonth() + 1,
             year: birthday.getFullYear() !== new Date().getFullYear() ? birthday.getFullYear() : null,
             relationship,
-            reminderType: reminder,
+            givesGifts,
             phone: phone.trim() || null,
             notes: notes.trim() || null,
         };
@@ -188,14 +180,22 @@ export default function ContactFormScreen({ route, navigation }: Props) {
                     </TouchableOpacity>
                 </View>
 
-                {/* Reminder */}
-                <View style={styles.card}>
-                    <Text style={styles.label}>Remind me</Text>
-                    <TouchableOpacity style={styles.selectRow} onPress={() => setShowReminderPicker(true)}>
-                        <Text style={[styles.selectText, { flex: 1 }]}>{remLabel}</Text>
-                        <Text style={styles.chevron}>›</Text>
-                    </TouchableOpacity>
-                </View>
+                {/* Gift toggle */}
+                <TouchableOpacity
+                    style={[styles.card, styles.giftToggleCard, givesGifts && styles.giftToggleCardActive]}
+                    onPress={() => setGivesGifts(g => !g)}
+                    activeOpacity={0.8}
+                >
+                    <View style={styles.giftToggleRow}>
+                        <View style={styles.giftToggleLeft}>
+                            <Text style={styles.giftToggleTitle}>🎁 I usually give them a gift</Text>
+                            <Text style={styles.giftToggleHint}>We'll remind you 2 weeks before their birthday</Text>
+                        </View>
+                        <View style={[styles.toggleTrack, givesGifts && styles.toggleTrackActive]}>
+                            <View style={[styles.toggleThumb, givesGifts && styles.toggleThumbActive]} />
+                        </View>
+                    </View>
+                </TouchableOpacity>
 
                 {/* Phone */}
                 <View style={styles.card}>
@@ -281,14 +281,6 @@ export default function ContactFormScreen({ route, navigation }: Props) {
                 onSelect={setRelationship}
                 onClose={() => setShowRelPicker(false)}
             />
-            <Picker
-                visible={showReminderPicker}
-                title="Remind me"
-                options={REMINDERS}
-                selected={reminder}
-                onSelect={setReminder}
-                onClose={() => setShowReminderPicker(false)}
-            />
         </>
     );
 }
@@ -323,6 +315,23 @@ const styles = StyleSheet.create({
     saveBtnText: { color: '#fff', fontSize: font.md, fontWeight: '700' },
     deleteBtn: { padding: 16, alignItems: 'center', marginTop: 4 },
     deleteBtnText: { color: colors.danger, fontSize: font.base },
+    // Gift toggle
+    giftToggleCard: { borderWidth: 1.5, borderColor: colors.border },
+    giftToggleCardActive: { borderColor: colors.primary, backgroundColor: '#fdf2f8' },
+    giftToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    giftToggleLeft: { flex: 1 },
+    giftToggleTitle: { fontSize: font.base, fontWeight: '700', color: colors.text },
+    giftToggleHint: { fontSize: font.xs, color: colors.textMuted, marginTop: 3 },
+    toggleTrack: {
+        width: 44, height: 26, borderRadius: 13, backgroundColor: colors.border,
+        justifyContent: 'center', paddingHorizontal: 2,
+    },
+    toggleTrackActive: { backgroundColor: colors.primary },
+    toggleThumb: {
+        width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff',
+        shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 2, elevation: 2,
+    },
+    toggleThumbActive: { transform: [{ translateX: 18 }] },
     // Date picker overlay
     datePickerContainer: {
         position: 'absolute', bottom: 0, left: 0, right: 0,
