@@ -29,9 +29,18 @@ const EventsStack = createNativeStackNavigator<EventsStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const Tab = createBottomTabNavigator<AppTabParamList>();
 
-function AuthNavigator({ onOnboardingDone }: { onOnboardingDone: (birthday?: { day: number; month: number }) => void }) {
+function AuthNavigator({
+    onOnboardingDone,
+    startAtLogin = false,
+}: {
+    onOnboardingDone: (birthday?: { day: number; month: number }) => void;
+    startAtLogin?: boolean;
+}) {
     return (
-        <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+        <AuthStack.Navigator
+            initialRouteName={startAtLogin ? 'Login' : 'Onboarding'}
+            screenOptions={{ headerShown: false }}
+        >
             <AuthStack.Screen name="Onboarding">
                 {() => <OnboardingScreen onDone={onOnboardingDone} />}
             </AuthStack.Screen>
@@ -199,10 +208,16 @@ export default function RootNavigator() {
 
     return (
         <NavigationContainer>
-            {user
-                ? <AppNavigator />
-                : <AuthNavigator onOnboardingDone={handleOnboardingDone} />
-            }
+            {user ? (
+                <AppNavigator />
+            ) : (
+                // key forces remount when onboardingDone flips true → starts at Login
+                <AuthNavigator
+                    key={onboardingDone ? 'post-onboarding' : 'onboarding'}
+                    onOnboardingDone={handleOnboardingDone}
+                    startAtLogin={onboardingDone}
+                />
+            )}
         </NavigationContainer>
     );
 }
